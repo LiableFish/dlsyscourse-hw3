@@ -1,3 +1,6 @@
+import sys
+sys.path.append("./python")
+
 import numpy as np
 import pytest
 import mugrade
@@ -256,13 +259,16 @@ getitem_params = [
     {"shape": (8, 16), "fn": lambda X: X[1:2, 1:3]},
     {"shape": (8, 16), "fn": lambda X: X[3:4, 1:4]},
     {"shape": (8, 16), "fn": lambda X: X[1:4, 3:4]},
+    {"shape": (4,), "fn": lambda X: X[0:4:2]},
+    {"shape": (4, 4, 4), "fn": lambda X: X[0:4:2, :3, 2:]},
+    {"shape": (4, 4, 4), "fn": lambda X: X[0:4:3, :3, 2:]},
 ]
 @pytest.mark.parametrize("params", getitem_params)
 @pytest.mark.parametrize("device", _DEVICES, ids=["cpu", "cuda"])
 def test_getitem(device, params):
     shape = params['shape']
     fn = params['fn']
-    _A = np.random.randn(5, 5)
+    _A = np.random.randn(*shape)
     A = nd.array(_A, device=device)
     lhs = fn(_A)
     rhs = fn(A)
