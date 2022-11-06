@@ -358,10 +358,10 @@ void ReduceMax(const AlignedArray& a, AlignedArray* out, size_t reduce_size) {
    *   out: compact array to write into
    *   reduce_size: size of the dimension to reduce over
    */
-
-  /// BEGIN YOUR SOLUTION
-
-  /// END YOUR SOLUTION
+  for (size_t i = 0; i < a.size / reduce_size; ++i) {
+    out->ptr[i] = *std::max_element(a.ptr + reduce_size * i,
+                                    a.ptr + reduce_size * (i + 1));
+  }
 }
 
 void ReduceSum(const AlignedArray& a, AlignedArray* out, size_t reduce_size) {
@@ -373,10 +373,11 @@ void ReduceSum(const AlignedArray& a, AlignedArray* out, size_t reduce_size) {
    *   out: compact array to write into
    *   reduce_size: size of the dimension to reduce over
    */
-
-  /// BEGIN YOUR SOLUTION
-
-  /// END YOUR SOLUTION
+  for (size_t i = 0; i < a.size / reduce_size; ++i) {
+    scalar_t init = 0;
+    out->ptr[i] = std::accumulate(a.ptr + reduce_size * i,
+                                  a.ptr + reduce_size * (i + 1), init);
+  }
 }
 
 } // namespace cpu
