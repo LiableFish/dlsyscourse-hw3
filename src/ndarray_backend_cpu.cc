@@ -79,13 +79,11 @@ void Compact(const AlignedArray& a, AlignedArray* out,
    *   out: compact version of the array to be written
    *   shape: shapes of each dimension for a and out
    *   strides: strides of the *a* array (not out, which has compact strides)
-   *   offset: offset of the *a* array (not out, which has zero offset, being
-   * compact)
+   *   offset: offset of the *a* array (not out, which has zero offset, being compact)
    *
    * Returns:
    *  void (you need to modify out directly, rather than returning anything;
-   * this is true for all the function will implement here, so we won't repeat
-   * this note.)
+   *  this is true for all the function will implement here, so we won't repeat this note.)
    */
   std::vector<uint32_t> indices(shape.size(), 0);
 
@@ -108,8 +106,7 @@ void EwiseSetitem(const AlignedArray& a, AlignedArray* out,
    *   out: non-compact array whose items are to be written
    *   shape: shapes of each dimension for a and out
    *   strides: strides of the *out* array (not a, which has compact strides)
-   *   offset: offset of the *out* array (not a, which has zero offset, being
-   * compact)
+   *   offset: offset of the *out* array (not a, which has zero offset, being compact)
    */
   std::vector<uint32_t> indices(shape.size(), 0);
 
@@ -128,12 +125,14 @@ void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out,
    * Set items is a (non-compact) array
    *
    * Args:
-   *   size: number of elements to write in out array (note that this will note
-   * be the same as out.size, because out is a non-compact subset array);  it
-   * _will_ be the same as the product of items in shape, but convenient to just
-   * pass it here. val: scalar value to write to out: non-compact array whose
-   * items are to be written shape: shapes of each dimension of out strides:
-   * strides of the out array offset: offset of the out array
+   *   size: number of elements to write in out array (note that this will note be the same as
+   *         out.size, because out is a non-compact subset array);  it _will_ be the same as the
+   *         product of items in shape, but convenient to just pass it here.
+   *   val: scalar value to write to
+   *   out: non-compact array whose items are to be written
+   *   shape: shapes of each dimension of out
+   *   strides: strides of the out array
+   *   offset: offset of the out array
    */
 
   std::vector<uint32_t> indices(shape.size(), 0);
@@ -146,13 +145,35 @@ void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out,
   }
 }
 
+template <typename Function>
+void EwiseFunction(const AlignedArray& a, const AlignedArray& b,
+                   AlignedArray* out, Function function) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = function(a.ptr[i], b.ptr[i]);
+  }
+}
+
+template <typename Function>
+void EwiseUnitFunction(const AlignedArray& a, AlignedArray* out,
+                       Function function) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = function(a.ptr[i]);
+  }
+}
+
+template <typename Function>
+void ScalarFunction(const AlignedArray& a, scalar_t val, AlignedArray* out,
+                    Function function) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = function(a.ptr[i], val);
+  }
+}
+
 void EwiseAdd(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
   /**
    * Set entries in out to be the sum of correspondings entires in a and b.
    */
-  for (size_t i = 0; i < a.size; i++) {
-    out->ptr[i] = a.ptr[i] + b.ptr[i];
-  }
+  EwiseFunction(a, b, out, std::plus<scalar_t>());
 }
 
 void ScalarAdd(const AlignedArray& a, scalar_t val, AlignedArray* out) {
@@ -160,9 +181,7 @@ void ScalarAdd(const AlignedArray& a, scalar_t val, AlignedArray* out) {
    * Set entries in out to be the sum of corresponding entry in a plus the
    * scalar val.
    */
-  for (size_t i = 0; i < a.size; i++) {
-    out->ptr[i] = a.ptr[i] + val;
-  }
+  ScalarFunction(a, val, out, std::plus<scalar_t>());
 }
 
 /**
@@ -185,9 +204,72 @@ void ScalarAdd(const AlignedArray& a, scalar_t val, AlignedArray* out) {
  * the proper) signatures above.
  */
 
-/// BEGIN YOUR SOLUTION
+void EwiseMul(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+  EwiseFunction(a, b, out, std::multiplies<scalar_t>());
+}
 
-/// END YOUR SOLUTION
+void ScalarMul(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  ScalarFunction(a, val, out, std::multiplies<scalar_t>());
+}
+
+void EwiseDiv(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+  EwiseFunction(a, b, out, std::divides<scalar_t>());
+}
+
+void ScalarDiv(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  ScalarFunction(a, val, out, std::divides<scalar_t>());
+}
+
+scalar_t pow(const scalar_t& a, const scalar_t& b) {
+  return std::pow<scalar_t>(a, b);
+}
+void ScalarPower(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  ScalarFunction(a, val, out, pow);
+}
+
+const scalar_t& max(const scalar_t& a, const scalar_t& b) {
+  return (a < b) ? b : a;
+}
+
+void EwiseMaximum(const AlignedArray& a, const AlignedArray& b,
+                  AlignedArray* out) {
+  EwiseFunction(a, b, out, max);
+}
+
+void ScalarMaximum(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  ScalarFunction(a, val, out, max);
+}
+
+void EwiseEq(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+  EwiseFunction(a, b, out, std::equal_to<scalar_t>());
+}
+
+void ScalarEq(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  ScalarFunction(a, val, out, std::equal_to<scalar_t>());
+}
+
+void EwiseGe(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+  EwiseFunction(a, b, out, std::greater_equal<scalar_t>());
+}
+
+void ScalarGe(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  ScalarFunction(a, val, out, std::greater_equal<scalar_t>());
+}
+
+scalar_t log(const scalar_t& a) { return std::log(a); }
+void EwiseLog(const AlignedArray& a, AlignedArray* out) {
+  EwiseUnitFunction(a, out, log);
+}
+
+scalar_t exp(const scalar_t& a) { return std::exp(a); }
+void EwiseExp(const AlignedArray& a, AlignedArray* out) {
+  EwiseUnitFunction(a, out, exp);
+}
+
+scalar_t tanh(const scalar_t& a) { return std::tanh(a); }
+void EwiseTanh(const AlignedArray& a, AlignedArray* out) {
+  EwiseUnitFunction(a, out, tanh);
+}
 
 void Matmul(const AlignedArray& a, const AlignedArray& b, AlignedArray* out,
             uint32_t m, uint32_t n, uint32_t p) {
@@ -336,22 +418,22 @@ PYBIND11_MODULE(ndarray_backend_cpu, m) {
   m.def("ewise_add", EwiseAdd);
   m.def("scalar_add", ScalarAdd);
 
-  // m.def("ewise_mul", EwiseMul);
-  // m.def("scalar_mul", ScalarMul);
-  // m.def("ewise_div", EwiseDiv);
-  // m.def("scalar_div", ScalarDiv);
-  // m.def("scalar_power", ScalarPower);
+  m.def("ewise_mul", EwiseMul);
+  m.def("scalar_mul", ScalarMul);
+  m.def("ewise_div", EwiseDiv);
+  m.def("scalar_div", ScalarDiv);
+  m.def("scalar_power", ScalarPower);
 
-  // m.def("ewise_maximum", EwiseMaximum);
-  // m.def("scalar_maximum", ScalarMaximum);
-  // m.def("ewise_eq", EwiseEq);
-  // m.def("scalar_eq", ScalarEq);
-  // m.def("ewise_ge", EwiseGe);
-  // m.def("scalar_ge", ScalarGe);
+  m.def("ewise_maximum", EwiseMaximum);
+  m.def("scalar_maximum", ScalarMaximum);
+  m.def("ewise_eq", EwiseEq);
+  m.def("scalar_eq", ScalarEq);
+  m.def("ewise_ge", EwiseGe);
+  m.def("scalar_ge", ScalarGe);
 
-  // m.def("ewise_log", EwiseLog);
-  // m.def("ewise_exp", EwiseExp);
-  // m.def("ewise_tanh", EwiseTanh);
+  m.def("ewise_log", EwiseLog);
+  m.def("ewise_exp", EwiseExp);
+  m.def("ewise_tanh", EwiseTanh);
 
   m.def("matmul", Matmul);
   m.def("matmul_tiled", MatmulTiled);
