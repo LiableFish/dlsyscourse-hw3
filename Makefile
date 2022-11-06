@@ -8,8 +8,10 @@ lib:
 	@cd build; cmake ..
 	@cd build; $(MAKE)
 
-format:
+black:
 	python3 -m black .
+
+clang-format:
 	clang-format -i src/*.cc src/*.cu
 
 clean:
