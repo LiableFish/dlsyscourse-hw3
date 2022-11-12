@@ -53,17 +53,12 @@ T GetOffset(const std::vector<T>& indices, const std::vector<T>& strides,
 
 template <typename T>
 void IncrementIndices(std::vector<T>* indices, const std::vector<T>& shape) {
-  T carry = 1;
   for (int i = shape.size() - 1; i >= 0; --i) {
-    if (carry != 1) {
-      continue;
-    }
-
     if ((*indices)[i] == shape[i] - 1) {
-      (*indices)[i] = 0;
+      (*indices)[i] = static_cast<T>(0);
     } else {
-      (*indices)[i] += carry;
-      carry = 0;
+      (*indices)[i] += static_cast<T>(1);
+      break;
     }
   }
 }
@@ -290,7 +285,8 @@ void Matmul(const AlignedArray& a, const AlignedArray& b, AlignedArray* out,
     for (size_t j = 0; j < p; ++j) {
       out->ptr[i * p + j] = 0;
       for (size_t k = 0; k < n; ++k) {
-        out->ptr[i * p + j] += static_cast<double>(a.ptr[i * n + k]) * b.ptr[k * p + j];
+        out->ptr[i * p + j] +=
+            static_cast<double>(a.ptr[i * n + k]) * b.ptr[k * p + j];
       }
     }
   }
@@ -325,7 +321,8 @@ inline void AlignedDot(const float* __restrict__ a, const float* __restrict__ b,
   for (size_t i = 0; i < TILE; ++i) {
     for (size_t j = 0; j < TILE; ++j) {
       for (size_t k = 0; k < TILE; ++k) {
-        out[i * TILE + j] += static_cast<double>(a[i * TILE + k]) * b[k * TILE + j];
+        out[i * TILE + j] +=
+            static_cast<double>(a[i * TILE + k]) * b[k * TILE + j];
       }
     }
   }
@@ -355,17 +352,17 @@ void MatmulTiled(const AlignedArray& a, const AlignedArray& b,
    */
   for (size_t i = 0; i < m / TILE; ++i) {
     for (size_t j = 0; j < p / TILE; ++j) {
-        size_t offset_out = i * p * TILE + j * TILE * TILE;
+      size_t offset_out = i * p * TILE + j * TILE * TILE;
 
-        for (size_t k = 0; k < TILE * TILE; ++k) {
-          out->ptr[offset_out + k] = 0;
-        }
+      for (size_t k = 0; k < TILE * TILE; ++k) {
+        out->ptr[offset_out + k] = 0;
+      }
 
-        for (size_t k = 0; k < n / TILE; ++ k) {
-          size_t offset_a = i * n * TILE + k * TILE * TILE;
-          size_t offset_b = k * p * TILE + j * TILE * TILE;
-          AlignedDot(a.ptr + offset_a, b.ptr + offset_b, out->ptr + offset_out);
-        }
+      for (size_t k = 0; k < n / TILE; ++k) {
+        size_t offset_a = i * n * TILE + k * TILE * TILE;
+        size_t offset_b = k * p * TILE + j * TILE * TILE;
+        AlignedDot(a.ptr + offset_a, b.ptr + offset_b, out->ptr + offset_out);
+      }
     }
   }
 }
