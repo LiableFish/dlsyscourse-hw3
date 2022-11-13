@@ -429,6 +429,19 @@ void EwiseUnitFunction(const CudaArray& a, CudaArray* out) {
 // Matmul
 ////////////////////////////////////////////////////////////////////////////////
 
+__global__ void MatmulKernel(const float* a, const float* b, float* out,
+                             uint32_t M, uint32_t N, uint32_t P) {
+  size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid < M * P) {
+    size_t i = gid / P;
+    size_t j = gid % P;
+    out[gid] = 0;
+    for (size_t k = 0; k < N; ++k) {
+      out[gid] += static_cast<double>(a[i * N + k]) * b[k * P + j];
+    }
+  }
+}
+
 void Matmul(const CudaArray& a, const CudaArray& b, CudaArray* out, uint32_t M,
             uint32_t N, uint32_t P) {
   /**
@@ -454,17 +467,16 @@ void Matmul(const CudaArray& a, const CudaArray& b, CudaArray* out, uint32_t M,
    *   N: columns of a / rows of b
    *   P: columns of b / out
    */
-
-  /// BEGIN YOUR SOLUTION
-
-  /// END YOUR SOLUTION
+  CudaDims dim = CudaOneDim(M * P);
+  MatmulKernel<<<dim.grid, dim.block>>>(a.ptr, b.ptr, out->ptr, M, N, P);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Max and sum reductions
 ////////////////////////////////////////////////////////////////////////////////
 
-__global__ void ReduceMaxKernel(const float* a, float* out, size_t size, size_t reduce_size) {
+__global__ void ReduceMaxKernel(const float* a, float* out, size_t size,
+                                size_t reduce_size) {
   size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid < size / reduce_size) {
     for (size_t i = 0; i < reduce_size; ++i) {
@@ -489,10 +501,12 @@ void ReduceMax(const CudaArray& a, CudaArray* out, size_t reduce_size) {
    *   redice_size: size of the dimension to reduce over
    */
   CudaDims dim = CudaOneDim(a.size / reduce_size);
-  ReduceMaxKernel<<<dim.grid, dim.block>>>(a.ptr, out->ptr, a.size, reduce_size);
+  ReduceMaxKernel<<<dim.grid, dim.block>>>(a.ptr, out->ptr, a.size,
+                                           reduce_size);
 }
 
-__global__ void ReduceSumKernel(const float* a, float* out, size_t size, size_t reduce_size) {
+__global__ void ReduceSumKernel(const float* a, float* out, size_t size,
+                                size_t reduce_size) {
   size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid < size / reduce_size) {
     out[gid] = 0;
@@ -513,7 +527,8 @@ void ReduceSum(const CudaArray& a, CudaArray* out, size_t reduce_size) {
    *   redice_size: size of the dimension to reduce over
    */
   CudaDims dim = CudaOneDim(a.size / reduce_size);
-  ReduceSumKernel<<<dim.grid, dim.block>>>(a.ptr, out->ptr, a.size, reduce_size);
+  ReduceSumKernel<<<dim.grid, dim.block>>>(a.ptr, out->ptr, a.size,
+                                           reduce_size);
 }
 
 } // namespace cuda
