@@ -295,7 +295,7 @@ __global__ void ScalarMaximumKernel(const scalar_t* a, scalar_t val,
                                     scalar_t* out, size_t size) {
   size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid < size)
-    out[gid] = (a[gid] < val) ? val : a[gid];
+    out[gid] = max(a[gid], val);
 }
 
 __global__ void EwiseEqKernel(const scalar_t* a, const scalar_t* b,
@@ -330,25 +330,25 @@ __global__ void ScalarPowerKernel(const scalar_t* a, scalar_t val,
                                   scalar_t* out, size_t size) {
   size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid < size)
-    out[gid] = std::pow<scalar_t>(a[gid], val);
+    out[gid] = pow(a[gid], val);
 }
 
 __global__ void EwiseLogKernel(const scalar_t* a, scalar_t* out, size_t size) {
   size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid < size)
-    out[gid] = std::log(a[gid]);
+    out[gid] = log(a[gid]);
 }
 
 __global__ void EwiseExpKernel(const scalar_t* a, scalar_t* out, size_t size) {
   size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid < size)
-    out[gid] = std::exp(a[gid]);
+    out[gid] = exp(a[gid]);
 }
 
 __global__ void EwiseTanhKernel(const scalar_t* a, scalar_t* out, size_t size) {
   size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid < size)
-    out[gid] = std::tanh(a[gid]);
+    out[gid] = tanh(a[gid]);
 }
 
 template <EwiseOp op>
@@ -464,6 +464,19 @@ void Matmul(const CudaArray& a, const CudaArray& b, CudaArray* out, uint32_t M,
 // Max and sum reductions
 ////////////////////////////////////////////////////////////////////////////////
 
+__global__ void ReduceMaxKernel(const float* a, float* out, size_t size, size_t reduce_size) {
+  size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid < size / reduce_size) {
+    for (size_t i = 0; i < reduce_size; ++i) {
+      if (i == 0) {
+        out[gid] = a[reduce_size * gid];
+      } else {
+        out[gid] = max(out[gid], a[reduce_size * gid + i]);
+      }
+    }
+  }
+}
+
 void ReduceMax(const CudaArray& a, CudaArray* out, size_t reduce_size) {
   /**
    * Reduce by taking maximum over `reduce_size` contiguous blocks.  Even though
@@ -475,9 +488,18 @@ void ReduceMax(const CudaArray& a, CudaArray* out, size_t reduce_size) {
    *   out: compact array to write into
    *   redice_size: size of the dimension to reduce over
    */
-  /// BEGIN YOUR SOLUTION
+  CudaDims dim = CudaOneDim(a.size / reduce_size);
+  ReduceMaxKernel<<<dim.grid, dim.block>>>(a.ptr, out->ptr, a.size, reduce_size);
+}
 
-  /// END YOUR SOLUTION
+__global__ void ReduceSumKernel(const float* a, float* out, size_t size, size_t reduce_size) {
+  size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid < size / reduce_size) {
+    out[gid] = 0;
+    for (size_t i = 0; i < reduce_size; ++i) {
+      out[gid] += a[reduce_size * gid + i];
+    }
+  }
 }
 
 void ReduceSum(const CudaArray& a, CudaArray* out, size_t reduce_size) {
@@ -490,9 +512,8 @@ void ReduceSum(const CudaArray& a, CudaArray* out, size_t reduce_size) {
    *   out: compact array to write into
    *   redice_size: size of the dimension to reduce over
    */
-  /// BEGIN YOUR SOLUTION
-
-  /// END YOUR SOLUTION
+  CudaDims dim = CudaOneDim(a.size / reduce_size);
+  ReduceSumKernel<<<dim.grid, dim.block>>>(a.ptr, out->ptr, a.size, reduce_size);
 }
 
 } // namespace cuda

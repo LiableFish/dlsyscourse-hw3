@@ -392,9 +392,9 @@ void ReduceSum(const AlignedArray& a, AlignedArray* out, size_t reduce_size) {
    *   reduce_size: size of the dimension to reduce over
    */
   for (size_t i = 0; i < a.size / reduce_size; ++i) {
-    scalar_t init = 0;
-    out->ptr[i] = std::accumulate(a.ptr + reduce_size * i,
-                                  a.ptr + reduce_size * (i + 1), init);
+    out->ptr[i] =
+        std::accumulate(a.ptr + reduce_size * i, a.ptr + reduce_size * (i + 1),
+                        static_cast<scalar_t>(0));
   }
 }
 
